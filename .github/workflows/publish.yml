@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".github/release/RELEASE"
+      - "package.json"
   pull_request:
     types: [opened, synchronize]
     branches:
@@ -62,7 +65,17 @@ jobs:
         id: release-tag
         run: echo "tag=$(grep 'tag:' .github/release/RELEASE | cut -d ' ' -f 2)" >> $GITHUB_OUTPUT
 
+      - name: Check if tag exists
+        id: tag-exists
+        run: |
+          if git rev-parse "${{ steps.release-tag.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create and push Git tag
+        if: steps.tag-exists.outputs.exists == 'false'
         run: |
           git tag -a ${{ steps.release-tag.outputs.tag }} -m "Release ${{ steps.release-tag.outputs.tag }}"
           git push origin ${{ steps.release-tag.outputs.tag }}
@@ -70,18 +83,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Publish to npm
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.tag-exists.outputs.exists == 'false'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
+        if: steps.tag-exists.outputs.exists == 'false'
         uses: pipe-cd/actions-gh-release@v2.6.0
         with:
           release_file: ".github/release/RELEASE"
           token: ${{ secrets.PAT_TOKEN }}
 
       - name: Push version changes to GitHub
+        if: steps.tag-exists.outputs.exists == 'false'
         run: |
           if [[ -n $(git status -s) ]]; then
             git add package.json .github/release/RELEASE
