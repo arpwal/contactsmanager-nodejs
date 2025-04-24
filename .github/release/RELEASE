@@ -1,0 +1,9 @@
+tag: nodejs-server-v1.0.1
+name: ContactsManager Server SDK
+title: "ContactsManager Server SDK v1.0.1"
+
+releaseNoteGenerator:
+  showAbbrevHash: true
+  showCommitter: true
+  useReleaseNoteBlock: true
+  usePullRequestLink: true

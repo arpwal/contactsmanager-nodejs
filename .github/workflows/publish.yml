@@ -7,15 +7,27 @@ on:
     paths:
       - "sdk/nodejs/**"
       - ".github/workflows/publish.yml"
+      - ".github/release/RELEASE"
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+    paths:
+      - ".github/release/RELEASE"
   workflow_dispatch:
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./sdk/nodejs
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -37,22 +49,13 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Publish to npm
-        if: success()
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
-        uses: comnoco/create-release@v2
-        if: success()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: pipe-cd/actions-gh-release@v2.6.0
         with:
-          tag_name: nodejs-server-v${{ steps.package-version.outputs.version }}
-          release_name: Node.js Server v${{ steps.package-version.outputs.version }}
-          body: |
-            Release of Node.js SDK version ${{ steps.package-version.outputs.version }}
-
-            This release includes the latest updates to the ContactsManager Node.js server SDK.
-          draft: false
-          prerelease: false
+          release_file: ".github/release/RELEASE"
+          token: ${{ secrets.GITHUB_TOKEN }}
