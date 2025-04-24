@@ -1,7 +1,7 @@
 {
   "name": "@contactsmanager/server",
   "version": "1.0.2",
-  "description": "Node.js SDK for ContactsManager API for authentication and token generation",
+  "description": "Node.js SDK for ContactsManager.io API for secure authentication and token generation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -19,10 +19,18 @@
     "manager",
     "authentication",
     "jwt",
-    "token"
+    "token",
+    "contactsmanager",
+    "social",
+    "contact-management"
   ],
   "author": "Arpit Agarwal",
   "license": "MIT",
+  "homepage": "https://www.contactsmanager.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arpwal/contactmanager-nodejs.git"
+  },
   "dependencies": {
     "jsonwebtoken": "^9.0.0"
   },

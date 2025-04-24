@@ -1,6 +1,10 @@
 # ContactsManager Node.js SDK
 
-A Node.js SDK for the ContactsManager API that handles authentication and token generation.
+A Node.js SDK for the ContactsManager API that handles authentication and token generation for [contactsmanager.io](https://www.contactsmanager.io) integration.
+
+## Overview
+
+The ContactsManager SDK enables developers to easily integrate social features into their applications. It provides secure authentication and token management, helping you build features like activity feeds, follow/unfollow functionality, and contact management while ensuring user data privacy and security.
 
 ## Installation
 
@@ -45,11 +49,12 @@ generateUserToken();
 
 ## Features
 
-- Simple API for generating JWT tokens
+- Simple API for generating JWT tokens for contactsmanager.io services
 - TypeScript support with type definitions
 - Comprehensive test coverage
 - Support for custom token expiration
 - Promise-based API
+- Military-grade security for user data protection
 
 ## Advanced Usage
 
@@ -113,3 +118,9 @@ Alternatively, you can manually trigger the workflow by going to the "Actions" t
 ## License
 
 MIT License
+
+## About ContactsManager.io
+
+[ContactsManager.io](https://www.contactsmanager.io) provides a platform for app developers to integrate social features into their applications. Our SDK ensures that contact information stays with users only, with multi-layer encryption and military-grade security to prevent spam and data misuse.
+
+For more information and documentation, visit [contactsmanager.io](https://www.contactsmanager.io).

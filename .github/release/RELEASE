@@ -7,3 +7,23 @@ releaseNoteGenerator:
   showCommitter: true
   useReleaseNoteBlock: true
   usePullRequestLink: true
+
+description: |
+  This is the first stable release of the ContactsManager Server SDK for Node.js with comprehensive documentation and full test coverage.
+  
+  The SDK enables app developers to easily integrate social features from contactsmanager.io into their applications, providing secure authentication and token management for users.
+  
+  ## Features
+  - Complete API for generating JWT tokens
+  - TypeScript support with type definitions
+  - 100% test coverage
+  - Support for custom token expiration
+  - Promise-based API
+  - Military-grade security for user data protection
+  
+  ## Documentation
+  - Detailed README.md with usage examples and advanced configurations
+  - Comprehensive API documentation
+  - Development setup instructions
+  
+  For more information, visit https://www.contactsmanager.io
