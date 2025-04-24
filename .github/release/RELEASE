@@ -1,6 +1,6 @@
-tag: nodejs-server-v1.0.3
+tag: nodejs-server-v1.1.0
 name: ContactsManager Server SDK
-title: "ContactsManager Server SDK v1.0.3"
+title: "ContactsManager Server SDK v1.1.0"
 
 releaseNoteGenerator:
   showAbbrevHash: true
