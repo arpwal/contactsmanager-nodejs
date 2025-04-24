@@ -102,10 +102,13 @@ The SDK uses an automated process for releases:
    git push origin main --follow-tags
    ```
 
-3. The GitHub Actions workflow will:
+3. The GitHub Actions workflow will automatically:
    - Run all tests
+   - Build the package
+   - Publish to npm (using the NPM_TOKEN stored in GitHub secrets)
    - Create a new GitHub release with the version tag
-   - Build and publish the package to npm
+
+Alternatively, you can manually trigger the workflow by going to the "Actions" tab in the GitHub repository and using the "Run workflow" button on the "Build and Publish" workflow.
 
 ## License
 
