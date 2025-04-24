@@ -5,13 +5,13 @@ A Node.js SDK for the ContactsManager API that handles authentication and token 
 ## Installation
 
 ```bash
-npm install @contactsmanager/sdk
+npm install @contactsmanager/server
 ```
 
 ## Usage
 
 ```javascript
-const { ContactsManagerClient } = require("@contactsmanager/sdk");
+const { ContactsManagerClient } = require("@contactsmanager/server");
 
 // Initialize the client
 const client = new ContactsManagerClient({

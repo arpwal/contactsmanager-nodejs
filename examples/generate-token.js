@@ -1,4 +1,4 @@
-const { ContactsManagerClient } = require("@contactsmanager/sdk");
+const { ContactsManagerClient } = require("@contactsmanager/server");
 
 // Initialize the client with your credentials
 const client = new ContactsManagerClient({
