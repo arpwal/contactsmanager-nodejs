@@ -1,0 +1,46 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build output
+dist/
+coverage/
+*.tsbuildinfo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.test
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Package files
+.npm
+.yarn-integrity
+# package-lock.json - Keep this in the repo for reproducible builds
+yarn.lock
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
