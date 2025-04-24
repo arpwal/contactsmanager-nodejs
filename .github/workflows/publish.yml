@@ -47,6 +47,25 @@ jobs:
         id: package-version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: Update RELEASE file with current version
+        run: |
+          VERSION=${{ steps.package-version.outputs.version }}
+          TAG_LINE="tag: nodejs-server-v$VERSION"
+          TITLE_LINE="title: \"ContactsManager Server SDK v$VERSION\""
+
+          # Update the tag and title in the RELEASE file
+          sed -i "1s/^tag:.*/$TAG_LINE/" .github/release/RELEASE
+          sed -i "3s/^title:.*/$TITLE_LINE/" .github/release/RELEASE
+
+      - name: Extract tag from RELEASE file
+        id: release-tag
+        run: echo "tag=$(grep 'tag:' .github/release/RELEASE | cut -d ' ' -f 2)" >> $GITHUB_OUTPUT
+
+      - name: Create and push Git tag
+        run: |
+          git tag -a ${{ steps.release-tag.outputs.tag }} -m "Release ${{ steps.release-tag.outputs.tag }}"
+          git push origin ${{ steps.release-tag.outputs.tag }}
+
       - name: Publish to npm
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: npm publish
