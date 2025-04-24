@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "sdk/nodejs/**"
-      - ".github/workflows/publish.yml"
-      - ".github/release/RELEASE"
   pull_request:
     types: [opened, synchronize]
     branches:
@@ -19,9 +15,6 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./sdk/nodejs
 
     steps:
       - name: Checkout repository
