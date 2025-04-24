@@ -43,12 +43,16 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: comnoco/create-release@v2
         if: success()
-        with:
-          tag_name: nodejs-sdk-v${{ steps.package-version.outputs.version }}
-          name: Node.js SDK v${{ steps.package-version.outputs.version }}
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: nodejs-server-v${{ steps.package-version.outputs.version }}
+          release_name: Node.js Server v${{ steps.package-version.outputs.version }}
+          body: |
+            Release of Node.js SDK version ${{ steps.package-version.outputs.version }}
+
+            This release includes the latest updates to the ContactsManager Node.js server SDK.
+          draft: false
+          prerelease: false
