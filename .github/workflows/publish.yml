@@ -2,23 +2,71 @@ name: Build and Publish
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - ".github/release/RELEASE"
-      - "package.json"
+    branches: [main]
+    tags:
+      - "v*"
   pull_request:
-    types: [opened, synchronize]
-    branches:
-      - main
-    paths:
-      - ".github/release/RELEASE"
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
-  build-and-publish:
+  test:
     runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build package
+        run: npm run build
+
+  publish-on-tag:
+    needs: test
+    runs-on: ubuntu-latest
+    # Only publish on tag push
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-on-main:
+    needs: test
+    runs-on: ubuntu-latest
+    # Only publish when code is merged into main branch (not on PRs)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -36,13 +84,9 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
-          git remote set-url origin https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Run tests
-        run: npm test
 
       - name: Build package
         run: npm run build
@@ -51,57 +95,18 @@ jobs:
         id: package-version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Update RELEASE file with current version
-        run: |
-          VERSION=${{ steps.package-version.outputs.version }}
-          TAG_LINE="tag: nodejs-server-v$VERSION"
-          TITLE_LINE="title: \"ContactsManager Server SDK v$VERSION\""
-
-          # Update the tag and title in the RELEASE file
-          sed -i "1s/^tag:.*/$TAG_LINE/" .github/release/RELEASE
-          sed -i "3s/^title:.*/$TITLE_LINE/" .github/release/RELEASE
-
-      - name: Extract tag from RELEASE file
-        id: release-tag
-        run: echo "tag=$(grep 'tag:' .github/release/RELEASE | cut -d ' ' -f 2)" >> $GITHUB_OUTPUT
-
-      - name: Check if tag exists
-        id: tag-exists
-        run: |
-          if git rev-parse "${{ steps.release-tag.outputs.tag }}" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create and push Git tag
-        if: steps.tag-exists.outputs.exists == 'false'
-        run: |
-          git tag -a ${{ steps.release-tag.outputs.tag }} -m "Release ${{ steps.release-tag.outputs.tag }}"
-          git push origin ${{ steps.release-tag.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      # Using a release action similar to the Python workflow
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.package-version.outputs.version }}
+          name: Release v${{ steps.package-version.outputs.version }}
+          draft: false
+          prerelease: false
+          generateReleaseNotes: true
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Publish to npm
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.tag-exists.outputs.exists == 'false'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        if: steps.tag-exists.outputs.exists == 'false'
-        uses: pipe-cd/actions-gh-release@v2.6.0
-        with:
-          release_file: ".github/release/RELEASE"
-          token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Push version changes to GitHub
-        if: steps.tag-exists.outputs.exists == 'false'
-        run: |
-          if [[ -n $(git status -s) ]]; then
-            git add package.json .github/release/RELEASE
-            git commit -m "Bump version to ${{ steps.package-version.outputs.version }}"
-            git push origin main
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
