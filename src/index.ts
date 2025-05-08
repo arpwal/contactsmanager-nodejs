@@ -45,7 +45,7 @@ export class ContactsManagerClient {
   private apiSecret: string;
   private orgId: string;
   private webhookSecret: string | null = null;
-  private defaultExpirationSeconds: number = 86400; // 24 hours
+  private defaultExpirationSeconds = 86400; // 24 hours
 
   /**
    * Create a new ContactsManagerClient

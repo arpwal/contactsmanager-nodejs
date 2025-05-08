@@ -1,4 +1,3 @@
-// @ts-ignore
 import jwt from 'jsonwebtoken';
 import { ContactsManagerClient } from './index';
 import crypto from 'crypto';

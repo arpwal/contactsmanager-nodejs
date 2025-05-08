@@ -13,6 +13,7 @@
     "test": "jest",
     "prepublishOnly": "npm run build",
     "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
     "release": "release-it",
     "publish-npm": "npm publish"
   },
