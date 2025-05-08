@@ -50,8 +50,13 @@ jobs:
       - name: Lint code
         run: npm run lint
 
-      - name: Run tests
+      - name: Run unit tests
         run: npm test
+
+      - name: Run integration tests
+        env:
+          TEST_CONFIG: ${{ secrets.TEST_CONFIG }}
+        run: npm run test:integration
 
       - name: Build package
         run: npm run build

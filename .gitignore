@@ -44,3 +44,10 @@ yarn.lock
 
 # Optional eslint cache
 .eslintcache
+
+# OS specific files
+Thumbs.db
+
+# IDE specific files
+*.sublime-project
+*.sublime-workspace

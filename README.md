@@ -107,6 +107,33 @@ npm install
 npm test
 ```
 
+### Running integration tests
+
+The SDK includes integration tests that verify the functionality against an actual ContactsManager API server.
+
+To run the integration tests locally:
+
+1. Create a `.env` file in the root directory with the following environment variable:
+
+```
+TEST_CONFIG={"apiKey":"your_api_key","apiSecret":"your_api_secret","orgId":"your_org_id","serverUrl":"https://api.contactsmanager.io"}
+```
+
+The `TEST_CONFIG` environment variable should be a JSON string containing all the required credentials:
+
+- `apiKey`: Your ContactsManager API key
+- `apiSecret`: Your ContactsManager API secret
+- `orgId`: Your organization ID
+- `serverUrl`: Optional server URL (defaults to https://api.contactsmanager.io)
+
+2. Run the integration tests:
+
+```bash
+npm run test:integration
+```
+
+Note: Integration tests are also run automatically in the CI pipeline if the required environment variables are configured as GitHub secrets. In GitHub Actions, set a secret named `TEST_CONFIG` with the JSON string value as shown above.
+
 ### Releasing new versions
 
 The SDK uses an automated process for releases:
