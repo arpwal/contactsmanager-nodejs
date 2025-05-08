@@ -1,5 +1,11 @@
 # ContactsManager Node.js SDK
 
+[![npm version](https://img.shields.io/npm/v/@contactsmanager/server.svg)](https://www.npmjs.com/package/@contactsmanager/server)
+[![Build Status](https://github.com/arpwal/contactsmanager-nodejs/actions/workflows/publish.yml/badge.svg)](https://github.com/arpwal/contactsmanager-nodejs/actions/workflows/publish.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-4.9.0-blue)](https://www.typescriptlang.org/)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/arpwal/contactsmanager-nodejs)
+
 A Node.js SDK for the ContactsManager API that handles authentication and token generation for [contactsmanager.io](https://www.contactsmanager.io) integration.
 
 ## Overview
