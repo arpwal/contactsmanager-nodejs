@@ -80,16 +80,17 @@ export class ContactsManagerClient {
     const expiresAt = now + expirationSeconds;
 
     const payload = {
-      sub: userId,
-      iss: this.apiKey,
-      org: this.orgId,
+      user_id: userId,
+      api_key: this.apiKey,
+      org_id: this.orgId,
       device: deviceInfo,
+      jti: crypto.randomUUID(),
       iat: now,
       exp: expiresAt
     };
 
     try {
-      const token = jwt.sign(payload, this.apiSecret);
+      const token = jwt.sign(payload, this.apiSecret, { algorithm: 'HS256' });
       
       return {
         token,

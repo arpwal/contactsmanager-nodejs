@@ -87,12 +87,14 @@ describe('ContactsManagerClient', () => {
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
-          sub: 'test-user-id',
-          iss: 'test-api-key',
-          org: 'test-org-id',
+          user_id: 'test-user-id',
+          api_key: 'test-api-key',
+          org_id: 'test-org-id',
           device: {},
+          jti: expect.any(String)
         }),
-        'test-api-secret'
+        'test-api-secret',
+        { algorithm: 'HS256' }
       );
     });
 
@@ -106,8 +108,10 @@ describe('ContactsManagerClient', () => {
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
           exp: expect.any(Number),
+          jti: expect.any(String)
         }),
-        'test-api-secret'
+        'test-api-secret',
+        { algorithm: 'HS256' }
       );
     });
 
@@ -125,9 +129,11 @@ describe('ContactsManagerClient', () => {
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
-          device: deviceInfo
+          device: deviceInfo,
+          jti: expect.any(String)
         }),
-        'test-api-secret'
+        'test-api-secret',
+        { algorithm: 'HS256' }
       );
     });
 
