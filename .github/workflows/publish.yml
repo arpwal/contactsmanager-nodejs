@@ -1,13 +1,26 @@
 name: Build and Publish
 
 on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: "Version bump type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
   push:
     branches: [main]
-    tags:
-      - "v*"
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+    paths:
+      - "src/**"
+      - "package.json"
+      - "tsconfig*.json"
+      - "!node_modules/**"
+      - "!.github/**"
+      - "!**.md"
 
 permissions:
   contents: write
@@ -20,12 +33,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
           registry-url: "https://registry.npmjs.org/"
+          scope: "@contactsmanager"
 
       - name: Install dependencies
         run: npm ci
@@ -36,49 +52,25 @@ jobs:
       - name: Build package
         run: npm run build
 
-  publish-on-tag:
-    needs: test
-    runs-on: ubuntu-latest
-    # Only publish on tag push
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-          registry-url: "https://registry.npmjs.org/"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build package
-        run: npm run build
-
-      - name: Publish to npm
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish-on-main:
+  publish:
     needs: test
     runs-on: ubuntu-latest
     # Only publish when code is merged into main branch (not on PRs)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
           registry-url: "https://registry.npmjs.org/"
+          scope: "@contactsmanager"
 
       - name: Configure Git
         run: |
@@ -88,25 +80,65 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build package
-        run: npm run build
+      - name: Set default version bump for push events
+        if: github.event_name == 'push'
+        run: |
+          echo "BUMP_TYPE=patch" >> $GITHUB_ENV
 
-      - name: Get package version
-        id: package-version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      # Using a release action similar to the Python workflow
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: v${{ steps.package-version.outputs.version }}
-          name: Release v${{ steps.package-version.outputs.version }}
-          draft: false
-          prerelease: false
-          generateReleaseNotes: true
-          token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Publish to npm
-        run: npm publish
+      - name: Check if version exists
+        id: version_check
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+          # Check if the next version would already exist in npm
+          BUMP_TYPE="${{ github.event.inputs.version_bump || env.BUMP_TYPE }}"
+          if [ "$BUMP_TYPE" = "patch" ]; then
+            NEXT_VERSION=$(node -e "const v='$CURRENT_VERSION'.split('.'); v[2]++; console.log(v.join('.'))")
+          elif [ "$BUMP_TYPE" = "minor" ]; then
+            NEXT_VERSION=$(node -e "const v='$CURRENT_VERSION'.split('.'); v[1]++; v[2]=0; console.log(v.join('.'))")
+          elif [ "$BUMP_TYPE" = "major" ]; then
+            NEXT_VERSION=$(node -e "const v='$CURRENT_VERSION'.split('.'); v[0]++; v[1]=0; v[2]=0; console.log(v.join('.'))")
+          fi
+
+          # Check if version exists in npm
+          if npm view "@contactsmanager/server@$NEXT_VERSION" version &>/dev/null; then
+            echo "Version $NEXT_VERSION already exists in npm registry"
+            echo "VERSION_EXISTS=true" >> $GITHUB_OUTPUT
+            echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Version $NEXT_VERSION is available"
+            echo "VERSION_EXISTS=false" >> $GITHUB_OUTPUT
+            echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release and Bump Version
+        if: steps.version_check.outputs.VERSION_EXISTS != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Run release-it with the specified bump type (or use the default for push events)
+          BUMP_TYPE="${{ github.event.inputs.version_bump || env.BUMP_TYPE }}"
+          npm run release $BUMP_TYPE --ci --no-git.requireUpstream
+
+          # Get new version for later use
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Publish to NPM
+        if: steps.version_check.outputs.VERSION_EXISTS != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm run publish-npm
+
+      - name: Output Result
+        if: steps.version_check.outputs.VERSION_EXISTS != 'true'
+        run: echo "Successfully published version ${{ env.NEW_VERSION }} to NPM"
+
+      - name: Version Already Exists
+        if: steps.version_check.outputs.VERSION_EXISTS == 'true'
+        run: |
+          echo "::warning::Version ${{ steps.version_check.outputs.NEXT_VERSION }} already exists in NPM registry. No changes were made."
