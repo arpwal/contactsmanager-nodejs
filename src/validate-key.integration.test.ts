@@ -1,6 +1,7 @@
 /// <reference types="jest" />
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
 import { ContactsManagerClient } from './index';
 
 // Explicitly declare Jest types to avoid TypeScript errors
@@ -18,7 +19,7 @@ dotenv.config();
 // Utility function for generating unique IDs
 const generateUniqueId = (prefix: string = ''): string => {
   const timestamp = Date.now();
-  const uniquePart = crypto.randomUUID().substring(0, 8); // Use first 8 chars of UUID
+  const uniquePart = randomUUID().substring(0, 8); // Use first 8 chars of UUID
   return prefix ? `${prefix}_${timestamp}_${uniquePart}` : `${timestamp}_${uniquePart}`;
 };
 
