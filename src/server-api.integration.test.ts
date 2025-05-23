@@ -15,6 +15,23 @@ declare const expect: any;
 // Load environment variables
 dotenv.config();
 
+// Utility functions for generating unique IDs
+const generateUniqueId = (prefix: string = ''): string => {
+  const timestamp = Date.now();
+  const uniquePart = crypto.randomUUID().substring(0, 8); // Use first 8 chars of UUID
+  return prefix ? `${prefix}_${timestamp}_${uniquePart}` : `${timestamp}_${uniquePart}`;
+};
+
+const generateUniqueEmail = (prefix: string = 'test'): string => {
+  const uniqueId = generateUniqueId();
+  return `${prefix}_${uniqueId}@example.com`;
+};
+
+const generateUniquePhone = (): string => {
+  const timestamp = Date.now();
+  return `+1555${timestamp % 10000}`;
+};
+
 // Define the config for test
 interface TestConfig {
   apiKey: string;
@@ -76,11 +93,11 @@ describeOrSkip('Integration tests - Server API', () => {
     it('should create user with email successfully', async () => {
       if (!testConfig) return;
 
-      const userId = `test_user_email_${Date.now()}`;
+      const userId = generateUniqueId('test_user_email');
       const userInfo: UserInfo = {
         userId,
         fullName: 'Test User Email',
-        email: `test_${Date.now()}@example.com`
+        email: generateUniqueEmail('test')
       };
 
       const deviceInfo: DeviceInfo = {
@@ -113,11 +130,11 @@ describeOrSkip('Integration tests - Server API', () => {
     it('should create user with phone successfully', async () => {
       if (!testConfig) return;
 
-      const userId = `test_user_phone_${Date.now()}`;
+      const userId = generateUniqueId('test_user_phone');
       const userInfo: UserInfo = {
         userId,
         fullName: 'Test User Phone',
-        phone: `+1555${Date.now() % 10000}`
+        phone: generateUniquePhone()
       };
 
       const deviceInfo: DeviceInfo = {
@@ -147,12 +164,12 @@ describeOrSkip('Integration tests - Server API', () => {
     it('should create user with both email and phone', async () => {
       if (!testConfig) return;
 
-      const userId = `test_user_both_${Date.now()}`;
+      const userId = generateUniqueId('test_user_both');
       const userInfo: UserInfo = {
         userId,
         fullName: 'Test User Both',
-        email: `test_both_${Date.now()}@example.com`,
-        phone: `+1555${Date.now() % 10000}`,
+        email: generateUniqueEmail('test_both'),
+        phone: generateUniquePhone(),
         avatarUrl: 'https://example.com/avatar.jpg',
         metadata: { testType: 'integration', timestamp: Date.now() }
       };
@@ -180,13 +197,13 @@ describeOrSkip('Integration tests - Server API', () => {
     it('should update existing user', async () => {
       if (!testConfig) return;
 
-      const userId = `test_user_update_${Date.now()}`;
+      const userId = generateUniqueId('test_user_update');
 
       // First, create a user
       const userInfoCreate: UserInfo = {
         userId,
         fullName: 'Original Name',
-        email: `original_${Date.now()}@example.com`
+        email: generateUniqueEmail('original')
       };
 
       try {
@@ -199,13 +216,14 @@ describeOrSkip('Integration tests - Server API', () => {
         const userInfoUpdate: UserInfo = {
           userId,
           fullName: 'Updated Name',
-          email: `updated_${Date.now()}@example.com`,
-          phone: `+1555${Date.now() % 10000}`
+          email: generateUniqueEmail('updated'),
+          phone: generateUniquePhone()
         };
 
         // Update user (should not create a new one)
         const updateResponse = await client.createUser(userInfoUpdate);
         expect(updateResponse.status).toBe('success');
+        // Note: created flag might be False for updates, depending on server implementation
         expect(updateResponse.data.user.organization_user_id).toBe(userId);
         expect(updateResponse.data.user.full_name).toBe('Updated Name');
       } catch (error) {
@@ -219,11 +237,11 @@ describeOrSkip('Integration tests - Server API', () => {
     it('should create user with custom expiry', async () => {
       if (!testConfig) return;
 
-      const userId = `test_user_expiry_${Date.now()}`;
+      const userId = generateUniqueId('test_user_expiry');
       const userInfo: UserInfo = {
         userId,
         fullName: 'Test User Expiry',
-        email: `expiry_${Date.now()}@example.com`
+        email: generateUniqueEmail('expiry')
       };
 
       // Use 1 hour expiry instead of default 24 hours
@@ -253,13 +271,13 @@ describeOrSkip('Integration tests - Server API', () => {
     it('should delete user successfully', async () => {
       if (!testConfig) return;
 
-      const userId = `test_user_delete_${Date.now()}`;
+      const userId = generateUniqueId('test_user_delete');
 
       // First, create a user to delete
       const userInfo: UserInfo = {
         userId,
         fullName: 'User To Delete',
-        email: `delete_${Date.now()}@example.com`
+        email: generateUniqueEmail('delete')
       };
 
       try {
@@ -282,20 +300,20 @@ describeOrSkip('Integration tests - Server API', () => {
       }
     });
 
-    it('should handle deleting nonexistent user', async () => {
+    it('should handle deleting non-existent user', async () => {
       if (!testConfig) return;
 
-      const userId = `nonexistent_user_${Date.now()}`;
+      const userId = generateUniqueId('nonexistent_user');
 
       try {
         // Attempt to delete non-existent user
-        await client.deleteUser(userId);
+        const deleteResponse = await client.deleteUser(userId);
         // This might succeed with a message indicating no user was found
         // or it might raise an error - both are valid depending on implementation
       } catch (error) {
         if (error instanceof ServerAPIError) {
           // If it raises an error, it should be a 404 or similar
-          expect([404, 400]).toContain(error.statusCode);
+          expect([404, 400].includes(error.statusCode || 0)).toBe(true);
         } else {
           throw error;
         }
@@ -305,55 +323,46 @@ describeOrSkip('Integration tests - Server API', () => {
 
   describe('direct API calls', () => {
     it('should make direct calls to server API endpoints', async () => {
-      if (!testConfig) return;
+      if (!testConfig || !testConfig.serverUrl) return;
 
-      const userId = `test_direct_api_${Date.now()}`;
+      const userId = generateUniqueId('test_direct_api');
 
       // Generate a token for authentication
       const tokenData = await client.generateToken({ userId });
       const token = tokenData.token;
 
       // Test the server create-user endpoint directly
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers = { 'Authorization': `Bearer ${token}` };
       const createUrl = `${testConfig.serverUrl}/api/v1/server/users/${userId}`;
 
       const userInfoDict = {
         userId,
         fullName: 'Direct API Test User',
-        email: `direct_${Date.now()}@example.com`
+        email: generateUniqueEmail('direct')
       };
 
       try {
         // Test create user endpoint
-        const response = await axios.post(
-          createUrl,
-          {
-            expiry_seconds: 86400,
-            user_info: userInfoDict,
-            device_info: {
-              deviceType: 'test',
-              os: 'integration-test'
-            }
-          },
-          { headers }
-        );
+        const response = await axios.post(createUrl, {
+          expiry_seconds: 86400,
+          user_info: userInfoDict,
+          device_info: { deviceType: 'test', os: 'integration-test' }
+        }, { headers });
 
         expect(response.status).toBe(200);
-        const data = response.data;
-        expect(data.status).toBe('success');
-        expect(data.data.token).toBeDefined();
-        expect(data.data.user).toBeDefined();
+        expect(response.data.status).toBe('success');
+        expect(response.data.data.token).toBeDefined();
+        expect(response.data.data.user).toBeDefined();
 
         // Test delete user endpoint
         const deleteUrl = `${testConfig.serverUrl}/api/v1/server/users/${userId}`;
         const deleteResponse = await axios.delete(deleteUrl, { headers });
 
         expect(deleteResponse.status).toBe(200);
-        const deleteData = deleteResponse.data;
-        expect(deleteData.status).toBe('success');
+        expect(deleteResponse.data.status).toBe('success');
       } catch (error) {
         if (axios.isAxiosError(error)) {
-          throw new Error(`API error: ${error.response?.status} - ${error.response?.data?.detail || error.message}`);
+          throw new Error(`HTTP error: ${error.response?.status} - ${error.response?.data}`);
         }
         throw error;
       }

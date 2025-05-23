@@ -15,6 +15,13 @@ declare const expect: any;
 // Load environment variables
 dotenv.config();
 
+// Utility function for generating unique IDs
+const generateUniqueId = (prefix: string = ''): string => {
+  const timestamp = Date.now();
+  const uniquePart = crypto.randomUUID().substring(0, 8); // Use first 8 chars of UUID
+  return prefix ? `${prefix}_${timestamp}_${uniquePart}` : `${timestamp}_${uniquePart}`;
+};
+
 // Define the config for test
 interface TestConfig {
   apiKey: string;
@@ -78,7 +85,7 @@ describeOrSkip('Integration tests - ContactsManagerClient', () => {
 
       // Generate a token first
       const tokenResponse = await client.generateToken({
-        userId: 'test-user-' + Date.now(),
+        userId: generateUniqueId('test-user'),
         deviceInfo: {
           deviceType: 'test',
           os: 'integration-test',
@@ -99,7 +106,7 @@ describeOrSkip('Integration tests - ContactsManagerClient', () => {
       const response = await api.post('/api/v1/client/validate-key', {
         api_key: testConfig.apiKey,
         user_info: {
-          userId: 'test-user-' + Date.now(),
+          userId: generateUniqueId('test-user'),
           email: 'test@example.com',
           fullName: 'Test User'
         },
@@ -121,7 +128,7 @@ describeOrSkip('Integration tests - ContactsManagerClient', () => {
 
       // Generate a token first
       const tokenResponse = await client.generateToken({
-        userId: 'test-user-' + Date.now(),
+        userId: generateUniqueId('test-user'),
         deviceInfo: {
           deviceType: 'test',
           os: 'integration-test',
@@ -143,7 +150,7 @@ describeOrSkip('Integration tests - ContactsManagerClient', () => {
         await api.post('/api/v1/client/validate-key', {
           api_key: 'invalid-api-key',
           user_info: {
-            userId: 'test-user-' + Date.now()
+            userId: generateUniqueId('test-user')
           }
         });
         // If we reach here, the test should fail
