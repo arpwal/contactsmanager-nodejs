@@ -33,16 +33,16 @@ export interface DeviceInfo {
  */
 export interface CMUser {
   id: string;
-  organizationId: string;
-  organizationUserId?: string;
+  organization_id: string;
+  organization_user_id?: string;
   email?: string;
   phone?: string;
-  fullName?: string;
-  avatarUrl?: string;
-  contactMetadata?: Record<string, any>;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  full_name?: string;
+  avatar_url?: string;
+  contact_metadata?: Record<string, any>;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**

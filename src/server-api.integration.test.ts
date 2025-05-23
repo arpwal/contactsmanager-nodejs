@@ -98,9 +98,9 @@ describeOrSkip('Integration tests - Server API', () => {
         expect(response.data.token.token).toBeDefined();
         expect(typeof response.data.token.expires_at).toBe('number');
         expect(response.data.user).toBeDefined();
-        expect(response.data.user.organizationUserId).toBe(userId);
+        expect(response.data.user.organization_user_id).toBe(userId);
         expect(response.data.user.email).toBe(userInfo.email);
-        expect(response.data.user.fullName).toBe(userInfo.fullName);
+        expect(response.data.user.full_name).toBe(userInfo.fullName);
         expect(typeof response.data.created).toBe('boolean');
       } catch (error) {
         if (error instanceof ServerAPIError) {
@@ -133,9 +133,9 @@ describeOrSkip('Integration tests - Server API', () => {
         expect(response.status).toBe('success');
         expect(response.data.token).toBeDefined();
         expect(response.data.user).toBeDefined();
-        expect(response.data.user.organizationUserId).toBe(userId);
+        expect(response.data.user.organization_user_id).toBe(userId);
         expect(response.data.user.phone).toBe(userInfo.phone);
-        expect(response.data.user.fullName).toBe(userInfo.fullName);
+        expect(response.data.user.full_name).toBe(userInfo.fullName);
       } catch (error) {
         if (error instanceof ServerAPIError) {
           throw new Error(`Server API error: ${error.message} (Status: ${error.statusCode})`);
@@ -163,12 +163,12 @@ describeOrSkip('Integration tests - Server API', () => {
         // Verify response structure
         expect(response.status).toBe('success');
         expect(response.data.user).toBeDefined();
-        expect(response.data.user.organizationUserId).toBe(userId);
+        expect(response.data.user.organization_user_id).toBe(userId);
         expect(response.data.user.email).toBe(userInfo.email);
         expect(response.data.user.phone).toBe(userInfo.phone);
-        expect(response.data.user.fullName).toBe(userInfo.fullName);
-        expect(response.data.user.avatarUrl).toBe(userInfo.avatarUrl);
-        expect(response.data.user.contactMetadata).toBeDefined();
+        expect(response.data.user.full_name).toBe(userInfo.fullName);
+        expect(response.data.user.avatar_url).toBe(userInfo.avatarUrl);
+        expect(response.data.user.contact_metadata).toBeDefined();
       } catch (error) {
         if (error instanceof ServerAPIError) {
           throw new Error(`Server API error: ${error.message} (Status: ${error.statusCode})`);
@@ -206,8 +206,8 @@ describeOrSkip('Integration tests - Server API', () => {
         // Update user (should not create a new one)
         const updateResponse = await client.createUser(userInfoUpdate);
         expect(updateResponse.status).toBe('success');
-        expect(updateResponse.data.user.organizationUserId).toBe(userId);
-        expect(updateResponse.data.user.fullName).toBe('Updated Name');
+        expect(updateResponse.data.user.organization_user_id).toBe(userId);
+        expect(updateResponse.data.user.full_name).toBe('Updated Name');
       } catch (error) {
         if (error instanceof ServerAPIError) {
           throw new Error(`Server API error: ${error.message} (Status: ${error.statusCode})`);
