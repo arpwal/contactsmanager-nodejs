@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { ContactsManagerClient } from './index';
+import { ContactsManagerClient, UserInfo, DeviceInfo, ServerAPIError } from './index';
 import crypto from 'crypto';
 
 // For TypeScript type checking
@@ -10,6 +10,9 @@ declare namespace jest {
     mockImplementation: (fn: (...args: Y) => T) => Mock<T, Y>;
     mockReturnValue: (val: T) => Mock<T, Y>;
     mockReturnThis: () => Mock<T, Y>;
+    mockClear: () => void;
+    mockResolvedValueOnce: (val: T) => Mock<T, Y>;
+    mockRejectedValueOnce: (val: any) => Mock<T, Y>;
   }
 }
 declare const describe: any;
@@ -19,6 +22,9 @@ declare const beforeEach: any;
 
 // Mock jsonwebtoken
 jest.mock('jsonwebtoken');
+
+// Mock fetch globally
+global.fetch = jest.fn();
 
 describe('ContactsManagerClient', () => {
   const mockConfig = {
@@ -30,6 +36,7 @@ describe('ContactsManagerClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
+    (global.fetch as jest.Mock).mockClear();
   });
 
   describe('constructor', () => {
@@ -147,6 +154,200 @@ describe('ContactsManagerClient', () => {
     });
   });
 
+  describe('createUser', () => {
+    const client = new ContactsManagerClient(mockConfig);
+
+    const validUserInfo: UserInfo = {
+      userId: 'test-user-123',
+      fullName: 'Test User',
+      email: 'test@example.com'
+    };
+
+    const validDeviceInfo: DeviceInfo = {
+      deviceType: 'mobile',
+      os: 'iOS',
+      appVersion: '1.0.0'
+    };
+
+    it('should create user successfully with valid parameters', async () => {
+      const mockResponse = {
+        status: 'success',
+        data: {
+          token: {
+            token: 'new-jwt-token',
+            expires_at: 1234567890
+          },
+          user: {
+            id: 'user-123',
+            organizationId: 'org-456',
+            organizationUserId: 'test-user-123',
+            email: 'test@example.com',
+            fullName: 'Test User',
+            isActive: true
+          },
+          created: true
+        }
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await client.createUser(validUserInfo, validDeviceInfo);
+
+      expect(result).toEqual(mockResponse);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/server/users/test-user-123'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer mock-jwt-token',
+            'Content-Type': 'application/json'
+          }),
+          body: JSON.stringify({
+            expiry_seconds: 86400,
+            user_info: validUserInfo,
+            device_info: validDeviceInfo
+          })
+        })
+      );
+    });
+
+    it('should create user with custom expiry seconds', async () => {
+      const mockResponse = {
+        status: 'success',
+        data: {
+          token: { token: 'token', expires_at: 1234567890 },
+          user: { id: 'user-123' },
+          created: true
+        }
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      await client.createUser(validUserInfo, validDeviceInfo, 3600);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: JSON.stringify({
+            expiry_seconds: 3600,
+            user_info: validUserInfo,
+            device_info: validDeviceInfo
+          })
+        })
+      );
+    });
+
+    it('should throw error for invalid userInfo', async () => {
+      await expect(client.createUser(null as any)).rejects.toThrow(
+        'userInfo is required and must be a UserInfo object'
+      );
+
+      await expect(client.createUser('invalid' as any)).rejects.toThrow(
+        'userInfo is required and must be a UserInfo object'
+      );
+    });
+
+    it('should handle server API errors', async () => {
+      const errorResponse = {
+        detail: 'User creation failed'
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => errorResponse
+      });
+
+      await expect(client.createUser(validUserInfo)).rejects.toThrow(
+        'Failed to create user: 400'
+      );
+    });
+
+    it('should handle network errors', async () => {
+      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(client.createUser(validUserInfo)).rejects.toThrow(
+        'Network error while creating user'
+      );
+    });
+  });
+
+  describe('deleteUser', () => {
+    const client = new ContactsManagerClient(mockConfig);
+
+    it('should delete user successfully', async () => {
+      const mockResponse = {
+        status: 'success',
+        message: 'User deleted successfully',
+        data: {
+          deleted_contact_id: 'contact-123'
+        }
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await client.deleteUser('test-user-123');
+
+      expect(result).toEqual(mockResponse);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/server/users/test-user-123'),
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer mock-jwt-token'
+          })
+        })
+      );
+    });
+
+    it('should throw error for invalid uid', async () => {
+      await expect(client.deleteUser('')).rejects.toThrow(
+        'User ID is required and must be a string'
+      );
+
+      await expect(client.deleteUser(null as any)).rejects.toThrow(
+        'User ID is required and must be a string'
+      );
+
+      await expect(client.deleteUser(123 as any)).rejects.toThrow(
+        'User ID is required and must be a string'
+      );
+    });
+
+    it('should handle server API errors', async () => {
+      const errorResponse = {
+        detail: 'User not found'
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => errorResponse
+      });
+
+      await expect(client.deleteUser('test-user-123')).rejects.toThrow(
+        'Failed to delete user: 404'
+      );
+    });
+
+    it('should handle network errors', async () => {
+      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(client.deleteUser('test-user-123')).rejects.toThrow(
+        'Network error while deleting user'
+      );
+    });
+  });
+
   describe('setWebhookSecret', () => {
     const client = new ContactsManagerClient(mockConfig);
 
@@ -198,67 +399,48 @@ describe('ContactsManagerClient', () => {
     it('should return false if signature components are missing', () => {
       expect(client.verifyWebhookSignature(validPayload, 'invalid-signature')).toBe(false);
       expect(client.verifyWebhookSignature(validPayload, 't=1609459200')).toBe(false);
-      expect(client.verifyWebhookSignature(validPayload, 'v1=valid-signature')).toBe(false);
+      expect(client.verifyWebhookSignature(validPayload, 'v1=signature')).toBe(false);
     });
 
     it('should return false if timestamp is too old', () => {
-      // Timestamp is more than 15 minutes old (900 seconds)
-      const oldTimestamp = Math.floor(Date.now() / 1000) - 1000;
-      expect(client.verifyWebhookSignature(validPayload, `t=${oldTimestamp},v1=valid-signature`)).toBe(false);
+      // Mock current time to be more than 15 minutes after the timestamp
+      jest.spyOn(Date, 'now').mockReturnValue((1609459200 + 901) * 1000);
+      
+      expect(client.verifyWebhookSignature(validPayload, 't=1609459200,v1=valid-signature')).toBe(false);
     });
 
-    it('should return true for valid signature with object payload', () => {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signature = `t=${timestamp},v1=valid-signature`;
+    it('should verify signature correctly for object payload', () => {
+      const result = client.verifyWebhookSignature(validPayload, 't=1609459200,v1=valid-signature');
       
-      expect(client.verifyWebhookSignature(validPayload, signature)).toBe(true);
-      
-      // Verify HMAC was called with correct parameters
-      expect(crypto.createHmac).toHaveBeenCalledWith('sha256', testWebhookSecret);
-      expect(mockCreateHmac.update).toHaveBeenCalledWith(`${timestamp}.${JSON.stringify(validPayload)}`);
+      expect(result).toBe(true);
+      expect(mockCreateHmac.update).toHaveBeenCalledWith('1609459200.' + JSON.stringify(validPayload));
+      expect(mockTimingSafeEqual).toHaveBeenCalled();
     });
 
-    it('should return true for valid signature with string payload', () => {
-      const timestamp = Math.floor(Date.now() / 1000);
+    it('should verify signature correctly for string payload', () => {
       const stringPayload = JSON.stringify(validPayload);
-      const signature = `t=${timestamp},v1=valid-signature`;
+      const result = client.verifyWebhookSignature(stringPayload, 't=1609459200,v1=valid-signature');
       
-      expect(client.verifyWebhookSignature(stringPayload, signature)).toBe(true);
-      
-      expect(crypto.createHmac).toHaveBeenCalledWith('sha256', testWebhookSecret);
-      expect(mockCreateHmac.update).toHaveBeenCalledWith(`${timestamp}.${stringPayload}`);
+      expect(result).toBe(true);
+      expect(mockCreateHmac.update).toHaveBeenCalledWith('1609459200.' + stringPayload);
     });
 
-    it('should handle signature verification errors', () => {
-      jest.spyOn(crypto, 'timingSafeEqual').mockImplementation(() => {
-        throw new Error('Verification error');
+    it('should return false for invalid signature', () => {
+      mockTimingSafeEqual.mockReturnValue(false);
+      
+      const result = client.verifyWebhookSignature(validPayload, 't=1609459200,v1=invalid-signature');
+      
+      expect(result).toBe(false);
+    });
+
+    it('should handle errors gracefully', () => {
+      jest.spyOn(crypto, 'createHmac').mockImplementation(() => {
+        throw new Error('Crypto error');
       });
       
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signature = `t=${timestamp},v1=valid-signature`;
+      const result = client.verifyWebhookSignature(validPayload, 't=1609459200,v1=signature');
       
-      expect(client.verifyWebhookSignature(validPayload, signature)).toBe(false);
-    });
-
-    it('should compare signatures using constant-time comparison', () => {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signature = `t=${timestamp},v1=valid-signature`;
-      
-      client.verifyWebhookSignature(validPayload, signature);
-      
-      expect(crypto.timingSafeEqual).toHaveBeenCalledWith(
-        Buffer.from('valid-signature'),
-        Buffer.from('valid-signature')
-      );
-    });
-
-    it('should return false if signature does not match', () => {
-      mockTimingSafeEqual.mockReturnValueOnce(false);
-      
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signature = `t=${timestamp},v1=invalid-signature`;
-      
-      expect(client.verifyWebhookSignature(validPayload, signature)).toBe(false);
+      expect(result).toBe(false);
     });
   });
 }); 

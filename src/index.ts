@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { ServerAPI, ServerAPIError, UserInfo, DeviceInfo, CreateUserResponse, DeleteUserResponse, CMUser } from './server-api';
 
 /**
  * Interface for ContactsManagerClient configuration
@@ -8,16 +9,6 @@ export interface ContactsManagerConfig {
   apiKey: string;
   apiSecret: string;
   orgId: string;
-}
-
-/**
- * Interface for device information
- */
-export interface DeviceInfo {
-  deviceType?: string;
-  os?: string;
-  appVersion?: string;
-  [key: string]: any;
 }
 
 /**
@@ -102,6 +93,67 @@ export class ContactsManagerClient {
   }
 
   /**
+   * Create or update a user on the server and return a token with user information
+   * 
+   * This method first generates a token for authentication, then calls the server API
+   * to create or update the user.
+   * 
+   * @param userInfo User information (required)
+   * @param deviceInfo Optional device information
+   * @param expirySeconds Token validity in seconds (default: 24 hours)
+   * @returns Promise with response data containing token and user information
+   */
+  public async createUser(
+    userInfo: UserInfo,
+    deviceInfo?: DeviceInfo,
+    expirySeconds: number = 86400
+  ): Promise<CreateUserResponse> {
+    if (!userInfo || typeof userInfo !== 'object') {
+      throw new Error('userInfo is required and must be a UserInfo object');
+    }
+
+    // Extract uid from userInfo
+    const uid = userInfo.userId;
+
+    // Generate a token for authentication
+    const tokenData = await this.generateToken({
+      userId: uid,
+      deviceInfo,
+      expirationSeconds: expirySeconds,
+    });
+
+    // Create server API client with the generated token
+    const serverApi = new ServerAPI(tokenData.token);
+
+    // Call the server API to create/update the user
+    return serverApi.createUser(uid, userInfo, deviceInfo, expirySeconds);
+  }
+
+  /**
+   * Delete a user from the server
+   * 
+   * This method first generates a token for authentication, then calls the server API
+   * to delete the user.
+   * 
+   * @param uid Unique user identifier
+   * @returns Promise with response data containing deletion confirmation
+   */
+  public async deleteUser(uid: string): Promise<DeleteUserResponse> {
+    if (!uid || typeof uid !== 'string') {
+      throw new Error('User ID is required and must be a string');
+    }
+
+    // Generate a token for authentication
+    const tokenData = await this.generateToken({ userId: uid });
+
+    // Create server API client with the generated token
+    const serverApi = new ServerAPI(tokenData.token);
+
+    // Call the server API to delete the user
+    return serverApi.deleteUser(uid);
+  }
+
+  /**
    * Set the webhook secret for verifying webhook signatures
    * 
    * @param secret The webhook secret from your dashboard
@@ -169,6 +221,17 @@ export class ContactsManagerClient {
     }
   }
 }
+
+// Export types and classes
+export {
+  ServerAPI,
+  ServerAPIError,
+  UserInfo,
+  DeviceInfo,
+  CreateUserResponse,
+  DeleteUserResponse,
+  CMUser,
+};
 
 // Export default and named exports
 export default ContactsManagerClient; 
