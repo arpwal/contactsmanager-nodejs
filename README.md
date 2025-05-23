@@ -6,11 +6,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-4.9.0-blue)](https://www.typescriptlang.org/)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/arpwal/contactsmanager-nodejs)
 
-A Node.js SDK for the ContactsManager API that handles authentication and token generation for [contactsmanager.io](https://www.contactsmanager.io) integration.
+A Node.js SDK for the ContactsManager API that handles user management, authentication, and token generation for [contactsmanager.io](https://www.contactsmanager.io) integration.
 
 ## Overview
 
-The ContactsManager SDK enables developers to easily integrate social features into their applications. It provides secure authentication and token management, helping you build features like activity feeds, follow/unfollow functionality, and contact management while ensuring user data privacy and security.
+The ContactsManager SDK enables developers to easily integrate social features into their applications. It provides secure user management and token generation, helping you build features like activity feeds, follow/unfollow functionality, and contact management while ensuring user data privacy and security.
 
 ## Installation
 
@@ -18,7 +18,7 @@ The ContactsManager SDK enables developers to easily integrate social features i
 npm install @contactsmanager/server
 ```
 
-## Usage
+## Quick Start
 
 ```javascript
 const { ContactsManagerClient } = require("@contactsmanager/server");
@@ -30,53 +30,313 @@ const client = new ContactsManagerClient({
   orgId: "your_org_id",
 });
 
-// Generate a token for a user
-async function generateUserToken() {
+// Create a user on the server and get a token
+async function createUserExample() {
   try {
-    const tokenResponse = await client.generateToken({
+    const userInfo = {
       userId: "user123",
-      deviceInfo: {
-        // Optional
-        deviceType: "mobile",
-        os: "Android",
-        appVersion: "1.0.0",
-      },
-    });
+      fullName: "John Doe",
+      email: "john@example.com",
+      phone: "+1234567890", // Optional
+    };
 
-    console.log(`Token: ${tokenResponse.token}`);
-    console.log(`Expires at: ${tokenResponse.expiresAt}`);
+    const deviceInfo = {
+      deviceType: "mobile",
+      os: "iOS",
+      appVersion: "1.0.0",
+    };
+
+    // Create user and get token in one call
+    const response = await client.createUser(userInfo, deviceInfo);
+
+    console.log(`User created: ${response.data.created}`);
+    console.log(`Token: ${response.data.token.token}`);
+    console.log(`Expires at: ${response.data.token.expires_at}`);
+    console.log(`User ID: ${response.data.user.organization_user_id}`);
   } catch (error) {
-    console.error("Error generating token:", error);
+    console.error("Error creating user:", error);
   }
 }
 
-generateUserToken();
+createUserExample();
 ```
 
-## Features
+## Core Features
 
-- Simple API for generating JWT tokens for contactsmanager.io services
-- TypeScript support with type definitions
-- Comprehensive test coverage
-- Support for custom token expiration
-- Promise-based API
-- Military-grade security for user data protection
+### 1. User Management
 
-## Advanced Usage
-
-### Custom Token Expiration
-
-By default, tokens expire after 24 hours (86400 seconds). You can customize this:
+Create or update users on the ContactsManager server:
 
 ```javascript
-// Generate a token that expires in 1 hour
+// Create user with email only
+const userInfo = {
+  userId: "user123",
+  fullName: "John Doe",
+  email: "john@example.com",
+};
+
+const response = await client.createUser(userInfo);
+
+// Create user with phone only
+const userInfo2 = {
+  userId: "user456",
+  fullName: "Jane Smith",
+  phone: "+1234567890",
+};
+
+const response2 = await client.createUser(userInfo2);
+
+// Create user with both email and phone
+const userInfo3 = {
+  userId: "user789",
+  fullName: "Bob Wilson",
+  email: "bob@example.com",
+  phone: "+1234567890",
+  avatarUrl: "https://example.com/avatar.jpg",
+  metadata: { role: "admin", department: "engineering" },
+};
+
+const response3 = await client.createUser(userInfo3);
+```
+
+### 2. Delete Users
+
+Remove users from the ContactsManager server:
+
+```javascript
+// Delete a user
+const response = await client.deleteUser("user123");
+
+console.log(`Status: ${response.status}`);
+console.log(`Message: ${response.message}`);
+console.log(`Deleted contact ID: ${response.data.deleted_contact_id}`);
+```
+
+### 3. Token Generation Only
+
+Generate tokens without creating users (for existing users):
+
+```javascript
+// Generate a token for an existing user
 const tokenResponse = await client.generateToken({
   userId: "user123",
-  expirationSeconds: 3600, // 1 hour
+  deviceInfo: {
+    deviceType: "mobile",
+    os: "Android",
+    appVersion: "1.0.0",
+  },
+});
+
+console.log(`Token: ${tokenResponse.token}`);
+console.log(`Expires at: ${tokenResponse.expiresAt}`);
+```
+
+### 4. Custom Token Expiration
+
+Control how long tokens remain valid:
+
+```javascript
+// Create user with 1-hour token expiration
+const response = await client.createUser(
+  userInfo,
+  deviceInfo,
+  3600 // 1 hour instead of default 24 hours
+);
+
+// Generate token with custom expiration
+const tokenResponse = await client.generateToken({
+  userId: "user123",
+  expirationSeconds: 7200, // 2 hours
 });
 ```
 
-### Token Structure
+## Implementation Flow
+
+Here's how to integrate ContactsManager into your application:
+
+### Server-Side Implementation
+
+```javascript
+const { ContactsManagerClient } = require("@contactsmanager/server");
+
+// 1. Initialize the client (do this once, typically in your app setup)
+const client = new ContactsManagerClient({
+  apiKey: process.env.CONTACTSMANAGER_API_KEY,
+  apiSecret: process.env.CONTACTSMANAGER_API_SECRET,
+  orgId: process.env.CONTACTSMANAGER_ORG_ID,
+});
+
+// 2. When a user signs up or logs in, create/update them on ContactsManager
+async function handleUserLogin(userData) {
+  const userInfo = {
+    userId: userData.id, // Your internal user ID
+    fullName: userData.name,
+    email: userData.email,
+    phone: userData.phone,
+  };
+
+  const deviceInfo = {
+    deviceType: userData.deviceType || "web",
+    os: userData.os,
+    appVersion: userData.appVersion,
+  };
+
+  try {
+    // Create/update user and get token
+    const response = await client.createUser(userInfo, deviceInfo);
+
+    // Return the token to your client app
+    return {
+      contactsmanager_token: response.data.token.token,
+      expires_at: response.data.token.expires_at,
+      user_created: response.data.created,
+    };
+  } catch (error) {
+    console.error("Error creating user:", error);
+    throw error;
+  }
+}
+
+// 3. When a user deletes their account, remove them from ContactsManager
+async function handleUserDeletion(userId) {
+  try {
+    const response = await client.deleteUser(userId);
+    return response.status === "success";
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return false;
+  }
+}
+
+// Express.js example
+app.post("/api/login", async (req, res) => {
+  try {
+    const userData = req.body;
+    const tokenData = await handleUserLogin(userData);
+    res.json(tokenData);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+app.delete("/api/users/:userId", async (req, res) => {
+  try {
+    const success = await handleUserDeletion(req.params.userId);
+    res.json({ success });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+```
+
+### Client-Side Usage
+
+Once you have the token from your server, use it in your client application:
+
+```javascript
+// In your mobile app or web frontend
+const contactsManagerToken = "token_from_your_server";
+
+// Use this token with ContactsManager client SDKs
+// to access social features, contact sync, etc.
+```
+
+## Data Types
+
+### UserInfo Interface
+
+```typescript
+interface UserInfo {
+  userId: string; // Required: Your internal user ID
+  fullName: string; // Required: User's display name
+  email?: string; // Optional: User's email
+  phone?: string; // Optional: User's phone number
+  avatarUrl?: string; // Optional: URL to user's avatar image
+  metadata?: Record<string, any>; // Optional: Additional user data
+}
+```
+
+### DeviceInfo Interface
+
+```typescript
+interface DeviceInfo {
+  deviceType?: string; // Optional: "mobile", "web", "desktop"
+  os?: string; // Optional: "iOS", "Android", "Windows"
+  appVersion?: string; // Optional: Your app version
+  locale?: string; // Optional: User's locale
+  timezone?: string; // Optional: User's timezone
+  [key: string]: any; // Additional device properties
+}
+```
+
+### Response Types
+
+```typescript
+interface CreateUserResponse {
+  status: string;
+  data: {
+    token: {
+      token: string;
+      expires_at: number;
+    };
+    user: CMUser;
+    created: boolean;
+  };
+}
+
+interface DeleteUserResponse {
+  status: string;
+  message: string;
+  data: {
+    deleted_contact_id: string;
+  };
+}
+```
+
+## Error Handling
+
+```javascript
+const { ServerAPIError } = require("@contactsmanager/server");
+
+try {
+  const response = await client.createUser(userInfo);
+  console.log("User created successfully!");
+} catch (error) {
+  if (error instanceof ServerAPIError) {
+    console.error(`Server error: ${error.message}`);
+    console.error(`Status code: ${error.statusCode}`);
+    console.error(`Response data:`, error.responseData);
+  } else {
+    console.error(`Unexpected error: ${error.message}`);
+  }
+}
+```
+
+## Webhook Verification
+
+Verify webhooks from ContactsManager:
+
+```javascript
+// Set your webhook secret (get this from ContactsManager dashboard)
+client.setWebhookSecret("your_webhook_secret");
+
+// Express.js webhook handler example
+app.post("/webhooks/contactsmanager", (req, res) => {
+  const payload = req.body;
+  const signature = req.headers["x-contactsmanager-signature"];
+
+  if (client.verifyWebhookSignature(payload, signature)) {
+    // Process the webhook
+    console.log("Webhook verified!");
+    res.json({ status: "success" });
+  } else {
+    console.log("Invalid webhook signature");
+    res.status(401).json({ error: "Invalid signature" });
+  }
+});
+```
+
+## Token Structure
 
 The tokens generated by the SDK have the following structure:
 
